@@ -53,7 +53,6 @@ function trajectory(prev::Bool, x_prev::Array{Float64})
     x[1, :] == [-5 0],
     x[n+1, :] == [6 1],
     v[1, :] == [2 0],
-    v[n+1, :] == [0 0]
   ]
   for i in 1:n
     cons += v[i+1, :] == v[i, :] + h*a[i, :]
@@ -62,11 +61,11 @@ function trajectory(prev::Bool, x_prev::Array{Float64})
   
   if prev == true
     for i in 2:n
-      cons += dot(x_prev[i, :], x[i, :]) >= norm(x_prev[i, :], 2)
+      cons += dot(x_prev[i, :], x[i, :]) >= norm(x_prev[i, :], 2) * norm(x[i, :], 2)
     end
   end
 
-  obj = h * sum([norm(a[i, :], 2) for i in 1:n+1])
+  obj = h * sumsquares(vcat([norm(a[i, :], 2) for i in 1:n+1]...))
   problem = minimize(obj, cons)
   solve!(problem, SCS.Optimizer())
 
@@ -77,7 +76,7 @@ x_no_roundabout, v_nr, a_nr = trajectory(false, [0.]);
 x_1iter, v_1, a_1 = trajectory(true, x_no_roundabout);
 
 x_prev = x_1iter
-for i in 1:500
+for i in 1:100
   x_prev, v_p, a_p = trajectory(true, x_prev)
 end
 
@@ -94,3 +93,19 @@ plot!([norm(a_nr[i, :], 2) for i in 1:n+1], label="Acceleration (No Roundabout)"
 plot!([norm(v_1[i, :], 2) for i in 1:n+1], label="Speed (No Roundabout)")
 plot!([norm(a_1[i, :], 2) for i in 1:n+1], label="Acceleration (No Roundabout)")
 plot!(title="Speed/Acceleration vs. Time", xlabel="Time Steps", ylabel="Speed")
+
+
+# 7.18
+m = [1 5 6 15 18 20 22 11 22 8 9 4 2]
+n = length(m)
+p = Variable(n)
+obj = -1*sum(vcat([m[i]*log(p[i]) for i in 1:n]...))
+cons = [sum(p) == 1]
+problem = minimize(obj, cons)
+solve!(problem, SCS.Optimizer())
+range(0.5, n+0.5, 1)
+
+width = 0.4
+bar(1-width/2:1:n-width/2, p.value, label="Estimated Probabilities", bar_width=width)
+bar!(1+width/2:1:n+width/2, transpose(m ./ sum(m)), label="Empirical Distribution", bar_width=width)
+bar!(title="MLE of Log-Concave Distribution", ticks=1:1:n)
