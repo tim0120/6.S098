@@ -52,15 +52,16 @@ function trajectory(prev::Bool, x_prev::Array{Float64})
   cons = [
     x[1, :] == [-5 0],
     x[n+1, :] == [6 1],
-    v[1, :] == [2 0]
+    v[1, :] == [2 0],
+    v[n+1, :] == [0 0]
   ]
   for i in 1:n
     cons += v[i+1, :] == v[i, :] + h*a[i, :]
     cons += x[i+1, :] == x[i, :] + h/2*(v[i+1, :] + v[i, :])
   end
   
-  if prev
-    for i in 1:n+1
+  if prev == true
+    for i in 2:n
       cons += dot(x_prev[i, :], x[i, :]) >= norm(x_prev[i, :], 2)
     end
   end
@@ -69,15 +70,15 @@ function trajectory(prev::Bool, x_prev::Array{Float64})
   problem = minimize(obj, cons)
   solve!(problem, SCS.Optimizer())
 
-  return x.value
+  return x.value, v.value, a.value
 end
 
-x_no_roundabout = trajectory(false, [0.])
-x_1iter = trajectory(true, x_no_roundabout)
+x_no_roundabout, v_nr, a_nr = trajectory(false, [0.]);
+x_1iter, v_1, a_1 = trajectory(true, x_no_roundabout);
 
 x_prev = x_1iter
-for i in 1:100
-  x_prev = trajectory(true, x_prev)
+for i in 1:500
+  x_prev, v_p, a_p = trajectory(true, x_prev)
 end
 
 plot(x_no_roundabout[:, 1], x_no_roundabout[:, 2], label="No Roundabout")
@@ -87,3 +88,9 @@ plot!(title="Bike Trajectories")
 angles = range(0, 2pi, 100);
 plot!(cos.(angles), sin.(angles), label="")
 plot!(aspect_ratio=:equal)
+
+plot([norm(v_nr[i, :], 2) for i in 1:n+1], label="Speed (No Roundabout)")
+plot!([norm(a_nr[i, :], 2) for i in 1:n+1], label="Acceleration (No Roundabout)")
+plot!([norm(v_1[i, :], 2) for i in 1:n+1], label="Speed (No Roundabout)")
+plot!([norm(a_1[i, :], 2) for i in 1:n+1], label="Acceleration (No Roundabout)")
+plot!(title="Speed/Acceleration vs. Time", xlabel="Time Steps", ylabel="Speed")
