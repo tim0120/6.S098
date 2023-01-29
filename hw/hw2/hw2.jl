@@ -16,8 +16,8 @@ for t in 1:T+1
 end
 
 c = Variable(T, N)
-q::AbstractArray{Union{Convex.AdditionAtom, Float64}} = zeros(T+1, N)
-s::AbstractArray{Union{Convex.MaxAtom, Float64}} = zeros(T+1, N)
+q = zeros(T+1, N)
+s = zeros(T+1, N)
 
 q[1, :] = q_init
 for t in 1:T
@@ -38,7 +38,11 @@ solve!(problem, ECOS.Optimizer())
 
 Pkg.add("Plots")
 using Plots
-areaplot(1:T, c.value)
+areaplot(1:T, c.value, labels=false)
+title!("Car Charging Allocation")
+xlabel!("Time Steps")
+xticks!(0:10:T)
+ylabel!("Charge")
 
 
 # 16.8
